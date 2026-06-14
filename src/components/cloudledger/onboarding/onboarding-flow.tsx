@@ -1,12 +1,12 @@
 "use client";
 
+import { CreditCard, MessageCircle, Pencil, Plus, Trash2, UserPlus } from "lucide-react";
+import type { ReactNode } from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { completeOnboarding } from "@/lib/cloudledger/actions";
 import type { Person } from "@/lib/cloudledger/types";
 import { ContactActions } from "../contact-actions";
-import { FloatingCard } from "../floating-card";
-import { TextingHelpCard } from "../texting-help-card";
 
 export function OnboardingFlow({
   currentPerson,
@@ -17,88 +17,182 @@ export function OnboardingFlow({
 }) {
   const [step, setStep] = useState(0);
   const isDad = currentPerson.role === "dad";
-  const steps = ["Welcome", "Texting", "Contact", "First action"];
+  const steps = ["Total", "Actions", "Transactions", "Texting"];
 
   return (
-    <FloatingCard className="mx-auto w-full max-w-2xl p-6 sm:p-8">
-      <div className="mb-6 flex gap-2">
-        {steps.map((label, index) => (
-          <div
-            key={label}
-            className={`h-2 flex-1 rounded-full ${index <= step ? "bg-sky-500" : "bg-white/70"}`}
-          />
-        ))}
+    <section className="w-full max-w-[430px] overflow-hidden rounded-[2rem] bg-white shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
+      <div className="bg-[#0d4359] px-7 pb-12 pt-6 text-white">
+        <div className="flex gap-2">
+          {steps.map((label, index) => (
+            <div
+              key={label}
+              className={`h-1.5 flex-1 rounded-full ${index <= step ? "bg-white" : "bg-white/20"}`}
+            />
+          ))}
+        </div>
+        <p className="mt-8 text-center text-sm font-semibold text-white/60">CloudLedger tutorial</p>
+        <h1 className="mt-2 text-center text-3xl font-black leading-tight">
+          {stepTitle(step, currentPerson.name)}
+        </h1>
       </div>
 
-      {step === 0 ? (
-        <div className="grid gap-5 text-center">
-          <p className="text-sm font-medium uppercase tracking-[0.22em] text-sky-700/80">Step 1 of 4</p>
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
-            {isDad ? "Welcome to CloudLedger" : `Welcome to CloudLedger, ${currentPerson.name}`}
-          </h1>
-          <p className="mx-auto max-w-md text-slate-600">
-            {isDad
-              ? "Track balances with each kid from one simple dashboard."
-              : "This keeps track of what Dad owes you, and what you owe Dad, without messy notes or mental math."}
-          </p>
-          <Button className="h-12 rounded-2xl bg-sky-600 text-white hover:bg-sky-700" onClick={() => setStep(1)}>
-            Get started
-          </Button>
-        </div>
-      ) : null}
+      <div className="-mt-7 px-6 pb-6">
+        <div className="rounded-[1.75rem] bg-[#f8f8f2] p-5">
+          {step === 0 ? (
+            <TutorialPanel
+              title={isDad ? "The total is the family snapshot." : "The total is your balance with Dad."}
+              body={
+                isDad
+                  ? "Positive means Dad pays out overall. Negative means the kids owe Dad overall."
+                  : "Positive means Dad owes you. Negative means you owe Dad. Zero means settled."
+              }
+            >
+              <div className="rounded-[1.5rem] bg-[#0d4359] p-5 text-center text-white">
+                <p className="text-sm font-semibold text-white/55">Total:</p>
+                <p className="mt-1 text-5xl font-black">$0.00</p>
+              </div>
+            </TutorialPanel>
+          ) : null}
 
-      {step === 1 ? (
-        <div className="grid gap-5">
-          <p className="text-sm font-medium uppercase tracking-[0.22em] text-sky-700/80">Step 2 of 4</p>
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-900">How texting works</h1>
-          <p className="text-slate-600">
-            {isDad
-              ? "Text the CloudLedger number and include the kid's name."
-              : "Text the CloudLedger number whenever Dad owes you for something."}
-          </p>
-          <TextingHelpCard currentPerson={currentPerson} phoneNumber={phoneNumber} />
-          <p className="text-sm leading-6 text-slate-600">
-            {isDad
-              ? "If you text a kid's name, amount, and item, CloudLedger assumes that kid owes you. If you owe the kid, write 'I owe [kid].'"
-              : "If you just text an amount and description, CloudLedger assumes Dad owes you. If you owe Dad, start with 'to dad.'"}
-          </p>
-          <Button className="h-12 rounded-2xl bg-sky-600 text-white hover:bg-sky-700" onClick={() => setStep(2)}>
-            Next
-          </Button>
-        </div>
-      ) : null}
+          {step === 1 ? (
+            <TutorialPanel
+              title="Use the three buttons at the top."
+              body="Settle up records that real money changed hands. Add contact saves the texting number. Add transaction jumps to the form."
+            >
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <MiniAction icon={<CreditCard className="h-5 w-5" />} label="Settle up" />
+                <MiniAction icon={<UserPlus className="h-5 w-5" />} label="Add contact" />
+                <MiniAction icon={<Plus className="h-5 w-5" />} label="Add transaction" />
+              </div>
+            </TutorialPanel>
+          ) : null}
 
-      {step === 2 ? (
-        <div className="grid gap-5">
-          <p className="text-sm font-medium uppercase tracking-[0.22em] text-sky-700/80">Step 3 of 4</p>
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Add CloudLedger as a contact</h1>
-          <div className="rounded-3xl bg-white/65 p-5">
-            <p className="text-sm text-slate-500">Contact name</p>
-            <p className="text-xl font-semibold text-slate-900">CloudLedger</p>
-            <p className="mt-4 text-sm text-slate-500">Phone number</p>
-            <p className="text-xl font-semibold text-slate-900">
-              {phoneNumber || "SMS number coming soon"}
-            </p>
-          </div>
-          <ContactActions phoneNumber={phoneNumber} />
-          <Button className="h-12 rounded-2xl bg-sky-600 text-white hover:bg-sky-700" onClick={() => setStep(3)}>
-            Continue
-          </Button>
-        </div>
-      ) : null}
+          {step === 2 ? (
+            <TutorialPanel
+              title="Tap or swipe each transaction."
+              body="Tap to see details and edit the description. Swipe right to delete. Swipe left to switch paid or unpaid."
+            >
+              <div className="grid gap-3">
+                <GestureRow icon={<Pencil className="h-4 w-4" />} title="Tap" body="Open details" />
+                <GestureRow icon={<Trash2 className="h-4 w-4" />} title="Swipe right" body="Delete" />
+                <GestureRow icon={<CreditCard className="h-4 w-4" />} title="Swipe left" body="Paid / unpaid" />
+              </div>
+            </TutorialPanel>
+          ) : null}
 
-      {step === 3 ? (
-        <div className="grid gap-5 text-center">
-          <p className="text-sm font-medium uppercase tracking-[0.22em] text-sky-700/80">Step 4 of 4</p>
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-900">You&apos;re ready</h1>
-          <p className="mx-auto max-w-md text-slate-600">Everything happens on one page now.</p>
-          <form action={completeOnboarding.bind(null, "/dashboard")}>
-            <Button type="submit" className="h-12 w-full rounded-2xl bg-sky-600 text-white hover:bg-sky-700">
-              Open CloudLedger
+          {step === 3 ? (
+            <TutorialPanel
+              title="You can add by text too."
+              body={
+                isDad
+                  ? "Text a kid name, amount, and description. Example: Jesse 45 gas."
+                  : "Text an amount and description. Example: 64 Uber Eats. Start with 'to dad' if you owe Dad."
+              }
+            >
+              <div className="rounded-[1.5rem] bg-white p-4">
+                <div className="flex items-center gap-3">
+                  <span className="grid h-11 w-11 place-items-center rounded-full bg-[#eaf7f4] text-[#178b8f]">
+                    <MessageCircle className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-bold text-[#183c3d]">CloudLedger</p>
+                    <p className="text-sm text-[#9aa9a7]">{phoneNumber || "SMS number coming soon"}</p>
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <ContactActions phoneNumber={phoneNumber} />
+                </div>
+              </div>
+            </TutorialPanel>
+          ) : null}
+        </div>
+
+        <div className="mt-5 grid gap-3">
+          {step < steps.length - 1 ? (
+            <Button
+              type="button"
+              onClick={() => setStep((current) => current + 1)}
+              className="h-12 rounded-full bg-[#0d4359] text-white hover:bg-[#0a3548]"
+            >
+              Next
             </Button>
-          </form>
+          ) : (
+            <form action={completeOnboarding.bind(null, "/dashboard")}>
+              <Button type="submit" className="h-12 w-full rounded-full bg-[#0d4359] text-white hover:bg-[#0a3548]">
+                Open CloudLedger
+              </Button>
+            </form>
+          )}
+          {step > 0 ? (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setStep((current) => current - 1)}
+              className="h-10 rounded-full text-[#667a78]"
+            >
+              Back
+            </Button>
+          ) : null}
         </div>
-      ) : null}
-    </FloatingCard>
+      </div>
+    </section>
   );
+}
+
+function TutorialPanel({
+  title,
+  body,
+  children,
+}: {
+  title: string;
+  body: string;
+  children: ReactNode;
+}) {
+  return (
+    <div>
+      <h2 className="text-2xl font-black leading-tight text-[#183c3d]">{title}</h2>
+      <p className="mt-2 text-sm leading-6 text-[#667a78]">{body}</p>
+      <div className="mt-5">{children}</div>
+    </div>
+  );
+}
+
+function MiniAction({ icon, label }: { icon: ReactNode; label: string }) {
+  return (
+    <div>
+      <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-white text-[#178b8f] shadow-[0_10px_24px_rgba(15,23,42,0.12)]">
+        {icon}
+      </span>
+      <span className="mt-3 block text-xs font-bold leading-tight text-[#183c3d]">{label}</span>
+    </div>
+  );
+}
+
+function GestureRow({
+  icon,
+  title,
+  body,
+}: {
+  icon: ReactNode;
+  title: string;
+  body: string;
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl bg-white px-4 py-3">
+      <span className="grid h-10 w-10 place-items-center rounded-full bg-[#eaf7f4] text-[#178b8f]">
+        {icon}
+      </span>
+      <div>
+        <p className="text-sm font-bold text-[#183c3d]">{title}</p>
+        <p className="text-xs text-[#9aa9a7]">{body}</p>
+      </div>
+    </div>
+  );
+}
+
+function stepTitle(step: number, name: string) {
+  if (step === 0) return `Hi, ${name}.`;
+  if (step === 1) return "Three buttons.";
+  if (step === 2) return "Transaction moves.";
+  return "Text it in.";
 }
