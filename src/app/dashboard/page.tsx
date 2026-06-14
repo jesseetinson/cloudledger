@@ -1,11 +1,11 @@
-import { CreditCard, LogOut, Plus, UserPlus } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { redirect } from "next/navigation";
-import type { ReactNode } from "react";
 import { CloudBackground } from "@/components/cloudledger/cloud-background";
+import { DashboardActions } from "@/components/cloudledger/dashboard-actions";
 import { MobileTransactionList } from "@/components/cloudledger/mobile-transaction-list";
 import { QuickAddForm } from "@/components/cloudledger/quick-add-form";
 import { ReviewCard } from "@/components/cloudledger/review-card";
-import { logout, settleBalance } from "@/lib/cloudledger/actions";
+import { logout } from "@/lib/cloudledger/actions";
 import { calculateBalances } from "@/lib/cloudledger/balances";
 import { getCloudLedgerPhoneNumber } from "@/lib/cloudledger/contact";
 import { formatMoney } from "@/lib/cloudledger/money";
@@ -40,25 +40,20 @@ export default async function DashboardPage() {
   return (
     <CloudBackground className="bg-[linear-gradient(180deg,#edf1ef_0%,#f7f8f2_100%)]">
       <main className="mx-auto min-h-dvh w-full max-w-[430px] px-4 py-10">
-        <section className="overflow-hidden rounded-[2rem] bg-white shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
+        <section className="rounded-[2rem] bg-white shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
           <HeroCard currentPerson={currentPerson} totalCents={totalCents} />
 
-          <div className="-mt-7 grid grid-cols-3 px-9 text-center">
-            <RoundAction
-              icon={<CreditCard className="h-5 w-5" />}
-              label="Settle up"
+          <div className="-mt-7">
+            <DashboardActions
               balance={firstOpenBalance}
-            />
-            <RoundAction
-              href="/api/contact-card"
-              icon={<UserPlus className="h-5 w-5" />}
-              label="Add contact"
-              disabled={!phoneNumber}
-            />
-            <RoundAction
-              href="#add-transaction"
-              icon={<Plus className="h-5 w-5" />}
-              label="Add transaction"
+              phoneNumber={phoneNumber}
+              addForm={
+                <QuickAddForm
+                  currentPerson={currentPerson}
+                  kids={currentPerson.role === "dad" ? kids : visibleKids}
+                  categories={categories}
+                />
+              }
             />
           </div>
 
@@ -93,9 +88,6 @@ export default async function DashboardPage() {
           </section>
         </section>
 
-        <section id="add-transaction" className="mt-5 scroll-mt-5">
-          <QuickAddForm currentPerson={currentPerson} kids={currentPerson.role === "dad" ? kids : visibleKids} categories={categories} />
-        </section>
       </main>
     </CloudBackground>
   );
@@ -103,7 +95,7 @@ export default async function DashboardPage() {
 
 function HeroCard({ currentPerson, totalCents }: { currentPerson: Person; totalCents: number }) {
   return (
-    <div className="relative h-[254px] overflow-hidden rounded-b-[2rem] bg-[#0d4359] px-7 pt-5 text-white">
+    <div className="relative h-[254px] overflow-hidden rounded-[2rem] bg-[#0d4359] px-7 pt-5 text-white">
       <div className="absolute inset-0 opacity-45">
         <div className="absolute -right-14 -top-24 h-80 w-80 rotate-45 border-[28px] border-[#86a5ae]/40" />
         <div className="absolute right-10 top-16 h-44 w-44 rotate-45 border-[18px] border-[#86a5ae]/35" />
@@ -124,52 +116,6 @@ function HeroCard({ currentPerson, totalCents }: { currentPerson: Person; totalC
           {signedMoney(totalCents)}
         </p>
       </div>
-    </div>
-  );
-}
-
-function RoundAction({
-  icon,
-  label,
-  balance,
-  href,
-  disabled = false,
-}: {
-  icon: ReactNode;
-  label: string;
-  balance?: BalanceSummary;
-  href?: string;
-  disabled?: boolean;
-}) {
-  const circle = (
-    <>
-      <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-white text-[#178b8f] shadow-[0_10px_24px_rgba(15,23,42,0.18)]">
-        {icon}
-      </span>
-      <span className="mt-3 block text-xs font-bold leading-tight text-[#183c3d]">{label}</span>
-    </>
-  );
-
-  if (balance && balance.netCents !== 0) {
-    return (
-      <form action={settleBalance} className="px-1">
-        <input type="hidden" name="kidId" value={balance.kid.id} />
-        <button type="submit" className="w-full">{circle}</button>
-      </form>
-    );
-  }
-
-  if (href && !disabled) {
-    return (
-      <a href={href} className="px-1">
-        {circle}
-      </a>
-    );
-  }
-
-  return (
-    <div className="px-1 opacity-45">
-      {circle}
     </div>
   );
 }
