@@ -1,0 +1,65 @@
+import type { Category, Person, TransactionWithRelations } from "./types";
+
+export const demoPeople: Person[] = [
+  { id: "dad", name: "Dad", role: "dad", phone: "+15550000001", onboarding_completed: true },
+  { id: "jesse", name: "Jesse", role: "kid", phone: "+15550000002", onboarding_completed: true },
+  { id: "brother-1", name: "Brother 1", role: "kid", phone: "+15550000003", onboarding_completed: true },
+  { id: "brother-2", name: "Brother 2", role: "kid", phone: "+15550000004", onboarding_completed: true },
+];
+
+export const demoCategories: Category[] = [
+  { id: "food-delivery", name: "Food / Delivery", slug: "food-delivery", icon: "utensils" },
+  { id: "clothing-shopping", name: "Clothing / Shopping", slug: "clothing-shopping", icon: "shirt" },
+  { id: "travel-transport", name: "Travel / Transport", slug: "travel-transport", icon: "car" },
+  { id: "subscriptions", name: "Subscriptions", slug: "subscriptions", icon: "refresh-cw" },
+  { id: "errands", name: "Errands", slug: "errands", icon: "shopping-bag" },
+  { id: "gifts", name: "Gifts", slug: "gifts", icon: "gift" },
+  { id: "health", name: "Health", slug: "health", icon: "heart-pulse" },
+  { id: "entertainment", name: "Entertainment", slug: "entertainment", icon: "ticket" },
+  { id: "other", name: "Other", slug: "other", icon: "sparkles" },
+];
+
+export const demoTransactions: TransactionWithRelations[] = [
+  {
+    id: "demo-1",
+    kid_id: "jesse",
+    submitted_by_id: "jesse",
+    amount_cents: 6400,
+    description: "Uber Eats",
+    category_id: "food-delivery",
+    direction: "dad_owes_kid",
+    source: "web",
+    raw_sms_text: null,
+    confidence: null,
+    needs_review: false,
+    review_reason: null,
+    is_paid: false,
+    paid_at: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    kid: demoPeople[1],
+    submitted_by: demoPeople[1],
+    category: demoCategories[0],
+  },
+  {
+    id: "demo-2",
+    kid_id: "brother-1",
+    submitted_by_id: "dad",
+    amount_cents: 4500,
+    description: "Gas",
+    category_id: "travel-transport",
+    direction: "kid_owes_dad",
+    source: "web",
+    raw_sms_text: null,
+    confidence: null,
+    needs_review: false,
+    review_reason: null,
+    is_paid: false,
+    paid_at: null,
+    created_at: new Date(Date.now() - 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 86400000).toISOString(),
+    kid: demoPeople[2],
+    submitted_by: demoPeople[0],
+    category: demoCategories[2],
+  },
+];

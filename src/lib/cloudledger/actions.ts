@@ -1,0 +1,243 @@
+"use server";
+
+import { cookies } from "next/headers";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { createSupabaseServiceClient } from "@/lib/supabase/server";
+import { dollarsToCents } from "./money";
+import { getCategories, getPeople, requireCurrentPerson, sessionCookieName } from "./data";
+import { phoneSchema, reviewUpdateSchema, transactionFormSchema } from "./validation";
+
+export async function loginWithPhone(formData: FormData) {
+  const phone = phoneSchema.parse(formData.get("phone"));
+  const people = await getPeople();
+  const person = people.find((candidate) => candidate.phone === phone);
+
+  if (!person) {
+    redirect("/login?error=unknown-phone");
+  }
+
+  (await cookies()).set(sessionCookieName, phone, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+  });
+
+  redirect(person.onboarding_completed ? "/dashboard" : "/onboarding");
+}
+
+export async function logout() {
+  (await cookies()).delete(sessionCookieName);
+  redirect("/login");
+}
+
+export async function completeOnboarding(destination: "/add" | "/dashboard", _formData?: FormData) {
+  void _formData;
+  const currentPerson = await requireCurrentPerson();
+  const supabase = createSupabaseServiceClient();
+
+  if (supabase) {
+    const { error } = await supabase
+      .from("people")
+      .update({ onboarding_completed: true })
+      .eq("id", currentPerson.id);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/onboarding");
+  redirect(destination);
+}
+
+export async function createTransaction(formData: FormData) {
+  const currentPerson = await requireCurrentPerson();
+  const parsed = transactionFormSchema.parse({
+    amount: formData.get("amount"),
+    description: formData.get("description"),
+    categoryId: formData.get("categoryId"),
+    kidId: formData.get("kidId") || undefined,
+    direction: formData.get("direction"),
+    note: formData.get("note") || undefined,
+    needsReview: formData.get("needsReview") === "on",
+  });
+
+  const people = await getPeople();
+  const categories = await getCategories();
+  const kidId = currentPerson.role === "kid" ? currentPerson.id : parsed.kidId;
+  const kid = people.find((person) => person.id === kidId && person.role === "kid");
+  const category = categories.find((candidate) => candidate.id === parsed.categoryId);
+
+  if (!kid) {
+    throw new Error("Dad must choose which kid this belongs to.");
+  }
+
+  if (!category) {
+    throw new Error("Choose a valid category.");
+  }
+
+  const supabase = createSupabaseServiceClient();
+
+  if (!supabase) {
+    redirect("/transactions?demo=1");
+  }
+
+  const amountCents = dollarsToCents(parsed.amount);
+  const { error } = await supabase.from("transactions").insert({
+    kid_id: kid.id,
+    submitted_by_id: currentPerson.id,
+    amount_cents: amountCents,
+    description: parsed.description,
+    category_id: category.id,
+    direction: parsed.direction,
+    source: "web",
+    needs_review: parsed.needsReview ?? false,
+    review_reason: parsed.needsReview ? parsed.note || "Flagged during manual entry." : null,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/transactions");
+  revalidatePath("/review");
+  const directionText =
+    parsed.direction === "dad_owes_kid"
+      ? currentPerson.role === "kid"
+        ? "Dad owes you"
+        : `Dad owes ${kid.name}`
+      : currentPerson.role === "kid"
+        ? "You owe Dad"
+        : `${kid.name} owes Dad`;
+  const addedMessage = `Added. ${directionText} $${(amountCents / 100).toFixed(2)} for ${parsed.description}.`;
+  redirect(`/transactions?added=${encodeURIComponent(addedMessage)}`);
+}
+
+export async function setTransactionPaid(transactionId: string, isPaid: boolean) {
+  const currentPerson = await requireCurrentPerson();
+  const supabase = createSupabaseServiceClient();
+
+  if (!supabase) {
+    redirect("/transactions?demo=1");
+  }
+
+  let query = supabase
+    .from("transactions")
+    .update({
+      is_paid: isPaid,
+      paid_at: isPaid ? new Date().toISOString() : null,
+    })
+    .eq("id", transactionId);
+
+  if (currentPerson.role === "kid") {
+    query = query.eq("kid_id", currentPerson.id);
+  }
+
+  const { error } = await query;
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/transactions");
+  revalidatePath("/review");
+}
+
+export async function approveReviewedTransaction(formData: FormData) {
+  const currentPerson = await requireCurrentPerson();
+  const parsed = reviewUpdateSchema.parse({
+    transactionId: formData.get("transactionId"),
+    amount: formData.get("amount"),
+    description: formData.get("description"),
+    categoryId: formData.get("categoryId"),
+    kidId: formData.get("kidId") || undefined,
+    direction: formData.get("direction"),
+    isPaid: formData.get("isPaid") === "on",
+  });
+  const people = await getPeople();
+  const categories = await getCategories();
+  const kidId = currentPerson.role === "kid" ? currentPerson.id : parsed.kidId;
+  const kid = people.find((person) => person.id === kidId && person.role === "kid");
+  const category = categories.find((candidate) => candidate.id === parsed.categoryId);
+
+  if (!kid) {
+    throw new Error("Choose which kid this belongs to.");
+  }
+
+  if (!category) {
+    throw new Error("Choose a valid category.");
+  }
+
+  const supabase = createSupabaseServiceClient();
+
+  if (!supabase) {
+    redirect("/review?demo=1");
+  }
+
+  let query = supabase
+    .from("transactions")
+    .update({
+      kid_id: kid.id,
+      amount_cents: dollarsToCents(parsed.amount),
+      description: parsed.description,
+      category_id: category.id,
+      direction: parsed.direction,
+      is_paid: parsed.isPaid ?? false,
+      paid_at: parsed.isPaid ? new Date().toISOString() : null,
+      needs_review: false,
+      review_reason: null,
+    })
+    .eq("id", parsed.transactionId);
+
+  if (currentPerson.role === "kid") {
+    query = query.eq("kid_id", currentPerson.id);
+  }
+
+  const { error } = await query;
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/transactions");
+  revalidatePath("/review");
+  redirect("/review");
+}
+
+export async function deleteTransaction(formData: FormData) {
+  const currentPerson = await requireCurrentPerson();
+  const transactionId = String(formData.get("transactionId") ?? "");
+
+  if (!transactionId) {
+    throw new Error("Missing item.");
+  }
+
+  const supabase = createSupabaseServiceClient();
+
+  if (!supabase) {
+    redirect("/review?demo=1");
+  }
+
+  let query = supabase.from("transactions").delete().eq("id", transactionId);
+
+  if (currentPerson.role === "kid") {
+    query = query.eq("kid_id", currentPerson.id);
+  }
+
+  const { error } = await query;
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/transactions");
+  revalidatePath("/review");
+  redirect("/review");
+}
