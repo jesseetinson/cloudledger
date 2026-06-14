@@ -1,6 +1,6 @@
 "use client";
 
-import { Car, Film, Gift, HeartPulse, MoreHorizontal, Plane, ShoppingBag, Utensils, X } from "lucide-react";
+import { Car, CheckCircle2, Film, Gift, HeartPulse, MoreHorizontal, Plane, RotateCcw, ShoppingBag, Trash2, Utensils, X } from "lucide-react";
 import type { PointerEvent } from "react";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -61,45 +61,102 @@ function SwipeTransactionRow({
 }) {
   const startX = useRef(0);
   const startY = useRef(0);
+  const startOffset = useRef(0);
+  const [offset, setOffset] = useState(0);
+  const [dragging, setDragging] = useState(false);
   const deleteFormRef = useRef<HTMLFormElement>(null);
   const paidFormRef = useRef<HTMLFormElement>(null);
   const delta = transaction.direction === "dad_owes_kid" ? 1 : -1;
   const signedAmount = currentPerson.role === "kid" ? delta : -delta;
+  const paidLabel = transaction.is_paid ? "Mark unpaid" : "Mark paid";
+  const PaidIcon = transaction.is_paid ? RotateCcw : CheckCircle2;
 
   function onPointerDown(event: PointerEvent<HTMLButtonElement>) {
     startX.current = event.clientX;
     startY.current = event.clientY;
+    startOffset.current = offset;
+    setDragging(false);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function onPointerMove(event: PointerEvent<HTMLButtonElement>) {
+    const dx = event.clientX - startX.current;
+    const dy = event.clientY - startY.current;
+
+    if (!dragging && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+      setDragging(Math.abs(dx) > Math.abs(dy) * 1.2);
+    }
+
+    if (Math.abs(dx) > Math.abs(dy) * 1.2) {
+      setOffset(clamp(startOffset.current + dx, -132, 132));
+    }
   }
 
   function onPointerUp(event: PointerEvent<HTMLButtonElement>) {
     const dx = event.clientX - startX.current;
     const dy = event.clientY - startY.current;
+    const nextOffset = clamp(startOffset.current + dx, -132, 132);
+    const isHorizontalSwipe = Math.abs(dx) > Math.abs(dy) * 1.2;
 
-    if (Math.abs(dx) < 72 || Math.abs(dx) < Math.abs(dy) * 1.4) {
+    event.currentTarget.releasePointerCapture(event.pointerId);
+
+    if (!isHorizontalSwipe || Math.abs(dx) < 12) {
+      if (offset !== 0) {
+        setOffset(0);
+        return;
+      }
       onOpen();
       return;
     }
 
-    if (dx > 0) {
+    if (nextOffset >= 118) {
       deleteFormRef.current?.requestSubmit();
-    } else {
-      paidFormRef.current?.requestSubmit();
+      return;
     }
+
+    if (nextOffset <= -118) {
+      paidFormRef.current?.requestSubmit();
+      return;
+    }
+
+    if (nextOffset >= 46) {
+      setOffset(96);
+      return;
+    }
+
+    if (nextOffset <= -46) {
+      setOffset(-96);
+      return;
+    }
+
+    setOffset(0);
   }
 
   return (
-    <div className="relative">
-      <div className="pointer-events-none absolute inset-y-2 left-0 flex items-center rounded-full bg-rose-50 px-4 text-xs font-semibold text-rose-600">
-        Delete
+    <div className="relative overflow-hidden rounded-[1.4rem]">
+      <div className="absolute inset-y-0 left-0 flex w-36 items-center rounded-[1.4rem] bg-[#ff5b63] px-4 text-white">
+        <div className="grid justify-items-center gap-1">
+          <Trash2 className="h-5 w-5" />
+          <span className="text-xs font-bold">Delete</span>
+        </div>
       </div>
-      <div className="pointer-events-none absolute inset-y-2 right-0 flex items-center rounded-full bg-emerald-50 px-4 text-xs font-semibold text-emerald-700">
-        {transaction.is_paid ? "Unpaid" : "Paid"}
+      <div className="absolute inset-y-0 right-0 flex w-36 items-center justify-end rounded-[1.4rem] bg-[#45c7a8] px-4 text-white">
+        <div className="grid justify-items-center gap-1">
+          <PaidIcon className="h-5 w-5" />
+          <span className="text-xs font-bold">{transaction.is_paid ? "Unpaid" : "Paid"}</span>
+        </div>
       </div>
       <button
         type="button"
         onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        className="relative grid w-full grid-cols-[3rem_1fr_auto] items-center gap-3 rounded-[1.4rem] bg-white px-4 py-3 text-left transition active:scale-[0.99]"
+        onPointerCancel={() => setOffset(0)}
+        style={{ transform: `translateX(${offset}px)`, touchAction: "pan-y" }}
+        className={cn(
+          "relative grid w-full grid-cols-[3rem_1fr_auto] items-center gap-3 rounded-[1.4rem] bg-white px-4 py-3 text-left shadow-sm",
+          dragging ? "transition-none" : "transition-transform duration-200 ease-out",
+        )}
       >
         <TransactionIcon slug={transaction.category.slug} paid={transaction.is_paid} />
         <span className="min-w-0">
@@ -122,6 +179,21 @@ function SwipeTransactionRow({
           </span>
         </span>
       </button>
+      {offset > 0 ? (
+        <form action={deleteTransaction} className="absolute inset-y-0 left-0 flex w-28 items-center">
+          <input type="hidden" name="transactionId" value={transaction.id} />
+          <button type="submit" className="h-full w-full text-left text-[0px]" aria-label="Delete transaction">
+            Delete
+          </button>
+        </form>
+      ) : null}
+      {offset < 0 ? (
+        <form action={setTransactionPaid.bind(null, transaction.id, !transaction.is_paid)} className="absolute inset-y-0 right-0 flex w-28 items-center">
+          <button type="submit" className="h-full w-full text-right text-[0px]" aria-label={paidLabel}>
+            {paidLabel}
+          </button>
+        </form>
+      ) : null}
       <form ref={deleteFormRef} action={deleteTransaction} className="hidden">
         <input type="hidden" name="transactionId" value={transaction.id} />
       </form>
@@ -252,4 +324,8 @@ function longDate(value: string) {
     dateStyle: "full",
     timeStyle: "short",
   }).format(new Date(value));
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
 }
