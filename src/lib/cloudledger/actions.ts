@@ -10,8 +10,25 @@ import { phoneSchema, reviewUpdateSchema, transactionFormSchema } from "./valida
 
 export async function loginWithPhone(formData: FormData) {
   const phone = phoneSchema.parse(formData.get("phone"));
-  const people = await getPeople();
-  const person = people.find((candidate) => candidate.phone === phone);
+  const supabase = createSupabaseServiceClient();
+  let person = null;
+
+  if (supabase) {
+    const { data, error } = await supabase
+      .from("people")
+      .select("id,name,role,phone,onboarding_completed")
+      .eq("phone", phone)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    person = data;
+  } else {
+    const people = await getPeople();
+    person = people.find((candidate) => candidate.phone === phone) ?? null;
+  }
 
   if (!person) {
     redirect("/login?error=unknown-phone");
