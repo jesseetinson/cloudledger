@@ -28,15 +28,15 @@ export function AppShell({
 
   return (
     <CloudBackground>
-      <div className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-4 py-5 pb-24 sm:px-6 sm:pb-5 lg:px-8">
-        <header className="mb-6 flex flex-col gap-4 rounded-3xl border border-white/70 bg-white/45 p-3 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
+      <div className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-4 py-4 pb-28 sm:px-6 sm:py-5 sm:pb-5 lg:px-8">
+        <header className="mb-5 flex items-center justify-between rounded-[1.75rem] border border-white/70 bg-white/45 p-3 backdrop-blur-xl sm:mb-6 sm:flex-row">
           <Link href="/dashboard" className="flex items-center gap-3 px-2">
             <div className="rounded-2xl bg-sky-600 p-2 text-white shadow-lg shadow-sky-300/50">
               <CloudSun className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-lg font-semibold tracking-tight text-slate-800">CloudLedger</p>
-              <p className="text-xs text-slate-500">Welcome back, {currentPerson.name}</p>
+              <p className="text-lg font-semibold text-slate-800">CloudLedger</p>
+              <p className="hidden text-xs text-slate-500 sm:block">Welcome back, {currentPerson.name}</p>
             </div>
           </Link>
           <nav className="hidden gap-1 overflow-x-auto sm:flex">
@@ -56,7 +56,7 @@ export function AppShell({
             </Button>
           </form>
         </header>
-        <main className="flex-1 pb-10">{children}</main>
+        <main className="flex-1 pb-12 sm:pb-10">{children}</main>
         <nav className="fixed inset-x-3 bottom-3 z-40 grid grid-cols-4 rounded-3xl border border-white/70 bg-white/75 p-2 shadow-2xl shadow-sky-900/10 backdrop-blur-xl sm:hidden">
           {navItems.map((item) => {
             const Icon = item.icon;

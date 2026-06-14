@@ -4,9 +4,10 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
+import { calculateBalances } from "./balances";
 import { dollarsToCents } from "./money";
-import { getCategories, getPeople, requireCurrentPerson, sessionCookieName } from "./data";
-import { phoneSchema, reviewUpdateSchema, transactionFormSchema } from "./validation";
+import { getCategories, getPeople, getSettlements, getTransactions, requireCurrentPerson, sessionCookieName } from "./data";
+import { phoneSchema, reviewUpdateSchema, settlementSchema, transactionFormSchema } from "./validation";
 
 export async function loginWithPhone(formData: FormData) {
   const phone = phoneSchema.parse(formData.get("phone"));
@@ -163,6 +164,55 @@ export async function setTransactionPaid(transactionId: string, isPaid: boolean)
   revalidatePath("/dashboard");
   revalidatePath("/transactions");
   revalidatePath("/review");
+}
+
+export async function settleBalance(formData: FormData) {
+  const currentPerson = await requireCurrentPerson();
+  const parsed = settlementSchema.parse({
+    kidId: formData.get("kidId"),
+  });
+  const people = await getPeople();
+  const kid = people.find((person) => person.id === parsed.kidId && person.role === "kid");
+
+  if (!kid) {
+    throw new Error("Choose which person to settle with.");
+  }
+
+  if (currentPerson.role === "kid" && currentPerson.id !== kid.id) {
+    throw new Error("You can only settle your own balance.");
+  }
+
+  const [transactions, settlements] = await Promise.all([
+    getTransactions(currentPerson),
+    getSettlements(currentPerson),
+  ]);
+  const balance = calculateBalances([kid], transactions, settlements)[0];
+
+  if (!balance || balance.netCents === 0) {
+    redirect("/dashboard");
+  }
+
+  const supabase = createSupabaseServiceClient();
+
+  if (!supabase) {
+    redirect("/dashboard?demo=1");
+  }
+
+  const { error } = await supabase.from("settlements").insert({
+    kid_id: kid.id,
+    submitted_by_id: currentPerson.id,
+    amount_cents: Math.abs(balance.netCents),
+    direction: balance.netCents > 0 ? "dad_owes_kid" : "kid_owes_dad",
+    note: "Settled from dashboard.",
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/transactions");
+  redirect("/dashboard");
 }
 
 export async function approveReviewedTransaction(formData: FormData) {

@@ -53,3 +53,7 @@ export const reviewUpdateSchema = z.object({
   direction: z.enum(["dad_owes_kid", "kid_owes_dad"]),
   isPaid: z.coerce.boolean().optional(),
 });
+
+export const settlementSchema = z.object({
+  kidId: z.string().min(1),
+});
