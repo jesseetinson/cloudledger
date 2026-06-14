@@ -57,3 +57,8 @@ export const reviewUpdateSchema = z.object({
 export const settlementSchema = z.object({
   kidId: z.string().min(1),
 });
+
+export const transactionDetailsSchema = z.object({
+  transactionId: z.string().min(1),
+  description: z.string().trim().min(2).max(120),
+});

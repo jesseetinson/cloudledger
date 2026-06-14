@@ -1,0 +1,255 @@
+"use client";
+
+import { Car, Film, Gift, HeartPulse, MoreHorizontal, Plane, ShoppingBag, Utensils, X } from "lucide-react";
+import type { PointerEvent } from "react";
+import { useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { deleteTransaction, setTransactionPaid, updateTransactionDetails } from "@/lib/cloudledger/actions";
+import { formatMoney } from "@/lib/cloudledger/money";
+import type { Person, TransactionWithRelations } from "@/lib/cloudledger/types";
+import { cn } from "@/lib/utils";
+
+export function MobileTransactionList({
+  transactions,
+  currentPerson,
+}: {
+  transactions: TransactionWithRelations[];
+  currentPerson: Person;
+}) {
+  const [selected, setSelected] = useState<TransactionWithRelations | null>(null);
+
+  if (transactions.length === 0) {
+    return (
+      <div className="rounded-[2rem] bg-white px-6 py-8 text-center">
+        <p className="text-lg font-semibold text-[#183c3d]">No transactions yet</p>
+        <p className="mt-2 text-sm text-[#9aa9a7]">Text CloudLedger when something needs tracking.</p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="grid gap-1">
+        {transactions.map((transaction) => (
+          <SwipeTransactionRow
+            key={transaction.id}
+            transaction={transaction}
+            currentPerson={currentPerson}
+            onOpen={() => setSelected(transaction)}
+          />
+        ))}
+      </div>
+      {selected ? (
+        <TransactionDetailsSheet
+          transaction={selected}
+          currentPerson={currentPerson}
+          onClose={() => setSelected(null)}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function SwipeTransactionRow({
+  transaction,
+  currentPerson,
+  onOpen,
+}: {
+  transaction: TransactionWithRelations;
+  currentPerson: Person;
+  onOpen: () => void;
+}) {
+  const startX = useRef(0);
+  const startY = useRef(0);
+  const deleteFormRef = useRef<HTMLFormElement>(null);
+  const paidFormRef = useRef<HTMLFormElement>(null);
+  const delta = transaction.direction === "dad_owes_kid" ? 1 : -1;
+  const signedAmount = currentPerson.role === "kid" ? delta : -delta;
+
+  function onPointerDown(event: PointerEvent<HTMLButtonElement>) {
+    startX.current = event.clientX;
+    startY.current = event.clientY;
+  }
+
+  function onPointerUp(event: PointerEvent<HTMLButtonElement>) {
+    const dx = event.clientX - startX.current;
+    const dy = event.clientY - startY.current;
+
+    if (Math.abs(dx) < 72 || Math.abs(dx) < Math.abs(dy) * 1.4) {
+      onOpen();
+      return;
+    }
+
+    if (dx > 0) {
+      deleteFormRef.current?.requestSubmit();
+    } else {
+      paidFormRef.current?.requestSubmit();
+    }
+  }
+
+  return (
+    <div className="relative">
+      <div className="pointer-events-none absolute inset-y-2 left-0 flex items-center rounded-full bg-rose-50 px-4 text-xs font-semibold text-rose-600">
+        Delete
+      </div>
+      <div className="pointer-events-none absolute inset-y-2 right-0 flex items-center rounded-full bg-emerald-50 px-4 text-xs font-semibold text-emerald-700">
+        {transaction.is_paid ? "Unpaid" : "Paid"}
+      </div>
+      <button
+        type="button"
+        onPointerDown={onPointerDown}
+        onPointerUp={onPointerUp}
+        className="relative grid w-full grid-cols-[3rem_1fr_auto] items-center gap-3 rounded-[1.4rem] bg-white px-4 py-3 text-left transition active:scale-[0.99]"
+      >
+        <TransactionIcon slug={transaction.category.slug} paid={transaction.is_paid} />
+        <span className="min-w-0">
+          <span className="block truncate text-sm font-semibold text-[#183c3d]">{transaction.description}</span>
+          <span className="mt-0.5 block truncate text-xs text-[#9aa9a7]">
+            {transactionSubtitle(transaction, currentPerson)}
+          </span>
+        </span>
+        <span className="text-right">
+          <span className="block text-xs text-[#9aa9a7]">{shortDate(transaction.created_at)}</span>
+          <span
+            className={cn(
+              "mt-1 block text-base font-bold",
+              signedAmount >= 0 ? "text-[#183c3d]" : "text-[#183c3d]",
+              transaction.is_paid && "text-[#9aa9a7] line-through",
+            )}
+          >
+            {signedAmount >= 0 ? "+" : "-"}
+            {formatMoney(transaction.amount_cents)}
+          </span>
+        </span>
+      </button>
+      <form ref={deleteFormRef} action={deleteTransaction} className="hidden">
+        <input type="hidden" name="transactionId" value={transaction.id} />
+      </form>
+      <form ref={paidFormRef} action={setTransactionPaid.bind(null, transaction.id, !transaction.is_paid)} className="hidden" />
+    </div>
+  );
+}
+
+function TransactionDetailsSheet({
+  transaction,
+  currentPerson,
+  onClose,
+}: {
+  transaction: TransactionWithRelations;
+  currentPerson: Person;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end bg-slate-950/30 px-3 pb-3 backdrop-blur-sm sm:items-center sm:justify-center">
+      <div className="w-full max-w-md rounded-[2rem] bg-white p-5 shadow-2xl">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-[#9aa9a7]">Transaction details</p>
+            <h2 className="mt-1 text-2xl font-bold text-[#183c3d]">{formatMoney(transaction.amount_cents)}</h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-10 w-10 place-items-center rounded-full bg-[#f3f5f1] text-[#183c3d]"
+            aria-label="Close details"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <dl className="mt-5 grid gap-3 text-sm">
+          <div className="rounded-2xl bg-[#f8f8f2] px-4 py-3">
+            <dt className="text-[#9aa9a7]">Date added</dt>
+            <dd className="mt-1 font-semibold text-[#183c3d]">{longDate(transaction.created_at)}</dd>
+          </div>
+          <div className="rounded-2xl bg-[#f8f8f2] px-4 py-3">
+            <dt className="text-[#9aa9a7]">Direction</dt>
+            <dd className="mt-1 font-semibold text-[#183c3d]">{transactionDirectionLabel(transaction, currentPerson)}</dd>
+          </div>
+        </dl>
+        <form action={updateTransactionDetails} className="mt-5 grid gap-3">
+          <input type="hidden" name="transactionId" value={transaction.id} />
+          <label className="grid gap-2 text-sm font-semibold text-[#183c3d]">
+            Description
+            <input
+              name="description"
+              defaultValue={transaction.description}
+              className="h-12 rounded-2xl border border-[#e5ebe7] bg-white px-4 text-base outline-none focus:border-[#46c9ae]"
+            />
+          </label>
+          <Button type="submit" className="h-12 rounded-full bg-[#0f3f52] text-white hover:bg-[#0b3444]">
+            Save description
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function TransactionIcon({ slug, paid }: { slug: string; paid: boolean }) {
+  const Icon =
+    slug.includes("transport") || slug.includes("travel")
+      ? Car
+      : slug.includes("food")
+        ? Utensils
+        : slug.includes("shopping")
+          ? ShoppingBag
+          : slug.includes("gift")
+            ? Gift
+            : slug.includes("health")
+              ? HeartPulse
+              : slug.includes("entertainment")
+                ? Film
+                : slug.includes("errand")
+                  ? Plane
+                  : MoreHorizontal;
+
+  return (
+    <span
+      className={cn(
+        "grid h-11 w-11 place-items-center rounded-full text-white",
+        paid ? "bg-[#cdd6d1]" : iconColor(slug),
+      )}
+    >
+      <Icon className="h-5 w-5" />
+    </span>
+  );
+}
+
+function iconColor(slug: string) {
+  if (slug.includes("food")) return "bg-[#67d9bd]";
+  if (slug.includes("shopping")) return "bg-[#b5a7df]";
+  if (slug.includes("gift")) return "bg-[#f77fac]";
+  if (slug.includes("transport") || slug.includes("travel")) return "bg-[#5ec9c4]";
+  if (slug.includes("entertainment")) return "bg-[#b9bec2]";
+  return "bg-[#d6ded8]";
+}
+
+function transactionSubtitle(transaction: TransactionWithRelations, currentPerson: Person) {
+  if (transaction.is_paid) {
+    return "Paid";
+  }
+
+  return transactionDirectionLabel(transaction, currentPerson);
+}
+
+function transactionDirectionLabel(transaction: TransactionWithRelations, currentPerson: Person) {
+  if (transaction.direction === "dad_owes_kid") {
+    return currentPerson.role === "kid" ? "Dad owes you" : `Dad owes ${transaction.kid.name}`;
+  }
+
+  return currentPerson.role === "kid" ? "You owe Dad" : `${transaction.kid.name} owes Dad`;
+}
+
+function shortDate(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    day: "2-digit",
+    month: "short",
+  }).format(new Date(value));
+}
+
+function longDate(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "full",
+    timeStyle: "short",
+  }).format(new Date(value));
+}

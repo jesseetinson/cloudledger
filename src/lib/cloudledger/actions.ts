@@ -7,7 +7,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { calculateBalances } from "./balances";
 import { dollarsToCents } from "./money";
 import { getCategories, getPeople, getSettlements, getTransactions, requireCurrentPerson, sessionCookieName } from "./data";
-import { phoneSchema, reviewUpdateSchema, settlementSchema, transactionFormSchema } from "./validation";
+import { phoneSchema, reviewUpdateSchema, settlementSchema, transactionDetailsSchema, transactionFormSchema } from "./validation";
 
 export async function loginWithPhone(formData: FormData) {
   const phone = phoneSchema.parse(formData.get("phone"));
@@ -164,6 +164,38 @@ export async function setTransactionPaid(transactionId: string, isPaid: boolean)
   revalidatePath("/dashboard");
   revalidatePath("/transactions");
   revalidatePath("/review");
+}
+
+export async function updateTransactionDetails(formData: FormData) {
+  const currentPerson = await requireCurrentPerson();
+  const parsed = transactionDetailsSchema.parse({
+    transactionId: formData.get("transactionId"),
+    description: formData.get("description"),
+  });
+  const supabase = createSupabaseServiceClient();
+
+  if (!supabase) {
+    redirect("/dashboard?demo=1");
+  }
+
+  let query = supabase
+    .from("transactions")
+    .update({
+      description: parsed.description,
+    })
+    .eq("id", parsed.transactionId);
+
+  if (currentPerson.role === "kid") {
+    query = query.eq("kid_id", currentPerson.id);
+  }
+
+  const { error } = await query;
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/dashboard");
 }
 
 export async function settleBalance(formData: FormData) {
