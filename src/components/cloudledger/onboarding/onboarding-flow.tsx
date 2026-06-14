@@ -91,19 +91,12 @@ export function OnboardingFlow({
         <div className="grid gap-5 text-center">
           <p className="text-sm font-medium uppercase tracking-[0.22em] text-sky-700/80">Step 4 of 4</p>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-900">You&apos;re ready</h1>
-          <p className="mx-auto max-w-md text-slate-600">Choose what you want to do first.</p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <form action={completeOnboarding.bind(null, "/add")}>
-              <Button type="submit" className="h-12 w-full rounded-2xl bg-sky-600 text-white hover:bg-sky-700">
-                {isDad ? "Add an item for a kid" : "Add my first item"}
-              </Button>
-            </form>
-            <form action={completeOnboarding.bind(null, "/dashboard")}>
-              <Button type="submit" variant="secondary" className="h-12 w-full rounded-2xl">
-                Go to dashboard
-              </Button>
-            </form>
-          </div>
+          <p className="mx-auto max-w-md text-slate-600">Everything happens on one page now.</p>
+          <form action={completeOnboarding.bind(null, "/dashboard")}>
+            <Button type="submit" className="h-12 w-full rounded-2xl bg-sky-600 text-white hover:bg-sky-700">
+              Open CloudLedger
+            </Button>
+          </form>
         </div>
       ) : null}
     </FloatingCard>

@@ -50,7 +50,7 @@ export async function logout() {
   redirect("/login");
 }
 
-export async function completeOnboarding(destination: "/add" | "/dashboard", _formData?: FormData) {
+export async function completeOnboarding(destination: "/dashboard", _formData?: FormData) {
   void _formData;
   const currentPerson = await requireCurrentPerson();
   const supabase = createSupabaseServiceClient();
@@ -100,7 +100,7 @@ export async function createTransaction(formData: FormData) {
   const supabase = createSupabaseServiceClient();
 
   if (!supabase) {
-    redirect("/transactions?demo=1");
+    redirect("/dashboard?demo=1");
   }
 
   const amountCents = dollarsToCents(parsed.amount);
@@ -132,7 +132,7 @@ export async function createTransaction(formData: FormData) {
         ? "You owe Dad"
         : `${kid.name} owes Dad`;
   const addedMessage = `Added. ${directionText} $${(amountCents / 100).toFixed(2)} for ${parsed.description}.`;
-  redirect(`/transactions?added=${encodeURIComponent(addedMessage)}`);
+  redirect(`/dashboard?added=${encodeURIComponent(addedMessage)}`);
 }
 
 export async function setTransactionPaid(transactionId: string, isPaid: boolean) {
@@ -140,7 +140,7 @@ export async function setTransactionPaid(transactionId: string, isPaid: boolean)
   const supabase = createSupabaseServiceClient();
 
   if (!supabase) {
-    redirect("/transactions?demo=1");
+    redirect("/dashboard?demo=1");
   }
 
   let query = supabase
@@ -243,7 +243,7 @@ export async function approveReviewedTransaction(formData: FormData) {
   const supabase = createSupabaseServiceClient();
 
   if (!supabase) {
-    redirect("/review?demo=1");
+    redirect("/dashboard?demo=1");
   }
 
   let query = supabase
@@ -274,7 +274,7 @@ export async function approveReviewedTransaction(formData: FormData) {
   revalidatePath("/dashboard");
   revalidatePath("/transactions");
   revalidatePath("/review");
-  redirect("/review");
+  redirect("/dashboard");
 }
 
 export async function deleteTransaction(formData: FormData) {
@@ -288,7 +288,7 @@ export async function deleteTransaction(formData: FormData) {
   const supabase = createSupabaseServiceClient();
 
   if (!supabase) {
-    redirect("/review?demo=1");
+    redirect("/dashboard?demo=1");
   }
 
   let query = supabase.from("transactions").delete().eq("id", transactionId);
@@ -306,5 +306,5 @@ export async function deleteTransaction(formData: FormData) {
   revalidatePath("/dashboard");
   revalidatePath("/transactions");
   revalidatePath("/review");
-  redirect("/review");
+  redirect("/dashboard");
 }

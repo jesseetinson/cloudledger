@@ -25,10 +25,11 @@ export function QuickAddForm({
   }, [kids, selectedKidId]);
 
   return (
-    <FloatingCard>
+    <FloatingCard className="p-5 sm:p-6">
       <div className="mb-5">
-        <p className="text-sm font-medium text-slate-500">Add item</p>
-        <h2 className="text-xl font-semibold text-slate-800">What should CloudLedger remember?</h2>
+        <p className="text-sm font-semibold text-sky-700">Add</p>
+        <h2 className="text-2xl font-semibold text-slate-950">What happened?</h2>
+        <p className="mt-1 text-sm text-slate-500">Amount, reason, who owes who. Done.</p>
       </div>
       <form action={createTransaction} className="grid gap-4">
         {isDad ? (
@@ -90,7 +91,9 @@ export function QuickAddForm({
           </div>
         </div>
 
-        <Button type="submit" className="h-12 rounded-2xl bg-sky-600 text-white hover:bg-sky-700">Add item</Button>
+        <Button type="submit" className="h-12 rounded-full bg-slate-950 text-white shadow-xl shadow-slate-900/10 hover:bg-slate-800">
+          Add to ledger
+        </Button>
       </form>
     </FloatingCard>
   );
