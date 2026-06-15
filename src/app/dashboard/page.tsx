@@ -1,10 +1,10 @@
 import { LogOut } from "lucide-react";
 import { redirect } from "next/navigation";
+import { CategorySpendBar } from "@/components/cloudledger/category-spend-bar";
 import { CloudBackground } from "@/components/cloudledger/cloud-background";
 import { DashboardActions } from "@/components/cloudledger/dashboard-actions";
 import { MobileTransactionList } from "@/components/cloudledger/mobile-transaction-list";
 import { QuickAddForm } from "@/components/cloudledger/quick-add-form";
-import { ReviewCard } from "@/components/cloudledger/review-card";
 import { logout } from "@/lib/cloudledger/actions";
 import { calculateBalances } from "@/lib/cloudledger/balances";
 import { getCloudLedgerPhoneNumber } from "@/lib/cloudledger/contact";
@@ -33,8 +33,6 @@ export default async function DashboardPage() {
   const totalCents = currentPerson.role === "dad"
     ? balances.reduce((sum, balance) => sum + balance.netCents, 0)
     : mainBalance?.netCents ?? 0;
-  const reviewItems = transactions.filter((transaction) => transaction.needs_review);
-  const activeTransactions = transactions.filter((transaction) => !transaction.needs_review);
   const phoneNumber = getCloudLedgerPhoneNumber();
 
   return (
@@ -61,30 +59,13 @@ export default async function DashboardPage() {
             <DadBalances balances={balances} />
           ) : null}
 
-          {reviewItems.length > 0 ? (
-            <div className="grid gap-3 px-6 pt-8">
-              <div>
-                <p className="text-lg font-bold text-[#183c3d]">Needs review</p>
-                <p className="text-xs text-[#9aa9a7]">Approve or fix unclear SMS entries.</p>
-              </div>
-              {reviewItems.map((transaction) => (
-                <ReviewCard
-                  key={transaction.id}
-                  transaction={transaction}
-                  categories={categories}
-                  kids={kids}
-                  currentPerson={currentPerson}
-                />
-              ))}
-            </div>
-          ) : null}
-
           <section className="px-6 pb-7 pt-10">
+            <CategorySpendBar transactions={transactions} />
             <div className="mb-5 flex items-center justify-between border-t border-[#e8eeeb] pt-7">
               <h2 className="text-xl font-bold text-[#183c3d]">Transactions</h2>
               <p className="text-sm font-semibold text-[#9aa9a7]">All</p>
             </div>
-            <MobileTransactionList transactions={activeTransactions} currentPerson={currentPerson} />
+            <MobileTransactionList transactions={transactions} currentPerson={currentPerson} categories={categories} />
           </section>
         </section>
 

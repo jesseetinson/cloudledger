@@ -171,7 +171,16 @@ export async function updateTransactionDetails(formData: FormData) {
   const parsed = transactionDetailsSchema.parse({
     transactionId: formData.get("transactionId"),
     description: formData.get("description"),
+    categoryId: formData.get("categoryId"),
+    direction: formData.get("direction"),
   });
+  const categories = await getCategories();
+  const category = categories.find((candidate) => candidate.id === parsed.categoryId);
+
+  if (!category) {
+    throw new Error("Choose a valid category.");
+  }
+
   const supabase = createSupabaseServiceClient();
 
   if (!supabase) {
@@ -182,6 +191,10 @@ export async function updateTransactionDetails(formData: FormData) {
     .from("transactions")
     .update({
       description: parsed.description,
+      category_id: category.id,
+      direction: parsed.direction,
+      needs_review: false,
+      review_reason: null,
     })
     .eq("id", parsed.transactionId);
 

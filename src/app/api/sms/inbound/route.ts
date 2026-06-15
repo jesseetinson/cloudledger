@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     source: "sms",
     raw_sms_text: body,
     confidence: parsed.confidence,
-    needs_review: parsed.needsReview,
+    needs_review: false,
     review_reason: parsed.reviewReason,
   });
 

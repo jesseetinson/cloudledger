@@ -6,15 +6,17 @@ import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { deleteTransaction, setTransactionPaid, updateTransactionDetails } from "@/lib/cloudledger/actions";
 import { formatMoney } from "@/lib/cloudledger/money";
-import type { Person, TransactionWithRelations } from "@/lib/cloudledger/types";
+import type { Category, Person, TransactionWithRelations } from "@/lib/cloudledger/types";
 import { cn } from "@/lib/utils";
 
 export function MobileTransactionList({
   transactions,
   currentPerson,
+  categories,
 }: {
   transactions: TransactionWithRelations[];
   currentPerson: Person;
+  categories: Category[];
 }) {
   const [selected, setSelected] = useState<TransactionWithRelations | null>(null);
 
@@ -43,6 +45,7 @@ export function MobileTransactionList({
         <TransactionDetailsSheet
           transaction={selected}
           currentPerson={currentPerson}
+          categories={categories}
           onClose={() => setSelected(null)}
         />
       ) : null}
@@ -205,10 +208,12 @@ function SwipeTransactionRow({
 function TransactionDetailsSheet({
   transaction,
   currentPerson,
+  categories,
   onClose,
 }: {
   transaction: TransactionWithRelations;
   currentPerson: Person;
+  categories: Category[];
   onClose: () => void;
 }) {
   return (
@@ -248,8 +253,37 @@ function TransactionDetailsSheet({
               className="h-12 rounded-2xl border border-[#e5ebe7] bg-white px-4 text-base outline-none focus:border-[#46c9ae]"
             />
           </label>
+          <label className="grid gap-2 text-sm font-semibold text-[#183c3d]">
+            Category
+            <select
+              name="categoryId"
+              defaultValue={transaction.category_id}
+              className="h-12 rounded-2xl border border-[#e5ebe7] bg-white px-4 text-base outline-none focus:border-[#46c9ae]"
+            >
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-2 text-sm font-semibold text-[#183c3d]">
+            Direction
+            <select
+              name="direction"
+              defaultValue={transaction.direction}
+              className="h-12 rounded-2xl border border-[#e5ebe7] bg-white px-4 text-base outline-none focus:border-[#46c9ae]"
+            >
+              <option value="dad_owes_kid">
+                {currentPerson.role === "kid" ? "Dad owes me" : `Dad owes ${transaction.kid.name}`}
+              </option>
+              <option value="kid_owes_dad">
+                {currentPerson.role === "kid" ? "I owe Dad" : `${transaction.kid.name} owes Dad`}
+              </option>
+            </select>
+          </label>
           <Button type="submit" className="h-12 rounded-full bg-[#0f3f52] text-white hover:bg-[#0b3444]">
-            Save description
+            Save transaction
           </Button>
         </form>
       </div>

@@ -138,7 +138,7 @@ export function parseCloudLedgerSms({
     direction,
     kid,
     confidence: category.slug === "other" ? 0.8 : 1,
-    needsReview: category.slug === "other",
+    needsReview: false,
     reviewReason: category.slug === "other" ? "SMS category was uncertain." : null,
   };
 }

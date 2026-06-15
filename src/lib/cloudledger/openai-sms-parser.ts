@@ -164,10 +164,8 @@ function mergeAiWithDeterministic({
   const category = findCategory(ai.category, categories) ?? categorizeSmsDescription(description, categories);
   const direction = ai.direction ?? (deterministic.ok ? deterministic.direction : inferSmsDirection(body, sender, kid));
   const confidence = Math.min(Math.max(ai.confidence, 0), 1);
-  const needsReview = ai.needs_review || confidence < 0.85 || category.slug === "other";
-  const reviewReason = needsReview
-    ? ai.reason || (confidence < 0.85 ? "AI confidence was below 0.85." : "AI marked this SMS for review.")
-    : null;
+  const reviewReason =
+    ai.reason || (confidence < 0.85 ? "AI confidence was below 0.85." : category.slug === "other" ? "SMS category was uncertain." : null);
 
   return {
     ok: true,
@@ -177,7 +175,7 @@ function mergeAiWithDeterministic({
     direction,
     kid,
     confidence,
-    needsReview,
+    needsReview: false,
     reviewReason,
   };
 }
