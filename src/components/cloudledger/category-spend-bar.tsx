@@ -25,15 +25,20 @@ export function CategorySpendBar({ transactions }: { transactions: TransactionWi
   }
 
   return (
-    <section className="mb-7 rounded-[1.75rem] bg-[#fbfcf8] px-5 py-5">
+    <section className="mb-7 rounded-[1.75rem] bg-[#fbfcf8] px-5 py-4">
       <button type="button" onClick={() => setExpanded((current) => !current)} className="w-full text-left">
-        <div className="flex items-end justify-between gap-4">
+        <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold text-[#9aa9a7]">Open by category</p>
-            <p className="mt-1 text-3xl font-black text-[#183c3d]">{formatMoney(total)}</p>
+            <p className="text-sm font-bold text-[#183c3d]">Open by category</p>
+            <p className="mt-0.5 text-xs font-semibold text-[#9aa9a7]">
+              {expanded ? "Hide breakdown" : "Tap to see where it is from"}
+            </p>
           </div>
+          <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-[#178b8f] shadow-sm">
+            {expanded ? "Close" : "Open"}
+          </span>
         </div>
-        <div className="mt-5 flex h-8 overflow-hidden rounded-full bg-[#edf1ed]">
+        <div className="mt-4 flex h-8 overflow-hidden rounded-full bg-[#edf1ed]">
           {rows.map((row, index) => (
             <span
               key={row.id}

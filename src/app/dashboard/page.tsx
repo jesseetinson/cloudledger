@@ -1,15 +1,14 @@
 import { LogOut } from "lucide-react";
 import { redirect } from "next/navigation";
-import { CategorySpendBar } from "@/components/cloudledger/category-spend-bar";
 import { CloudBackground } from "@/components/cloudledger/cloud-background";
 import { DashboardActions } from "@/components/cloudledger/dashboard-actions";
-import { MobileTransactionList } from "@/components/cloudledger/mobile-transaction-list";
 import { QuickAddForm } from "@/components/cloudledger/quick-add-form";
+import { TransactionSection } from "@/components/cloudledger/transaction-section";
 import { logout } from "@/lib/cloudledger/actions";
 import { calculateBalances } from "@/lib/cloudledger/balances";
 import { getCloudLedgerPhoneNumber } from "@/lib/cloudledger/contact";
 import { formatMoney } from "@/lib/cloudledger/money";
-import type { BalanceSummary, Person } from "@/lib/cloudledger/types";
+import type { Person } from "@/lib/cloudledger/types";
 import { getCategories, getPeople, getTransactions, requireCurrentPerson } from "@/lib/cloudledger/data";
 
 export default async function DashboardPage() {
@@ -28,7 +27,6 @@ export default async function DashboardPage() {
   const visibleKids = currentPerson.role === "dad" ? kids : kids.filter((kid) => kid.id === currentPerson.id);
   const balances = calculateBalances(visibleKids, transactions);
   const mainBalance = currentPerson.role === "dad" ? null : balances[0];
-  const firstOpenBalance = balances.find((balance) => balance.netCents !== 0) ?? balances[0];
   const totalCents = currentPerson.role === "dad"
     ? balances.reduce((sum, balance) => sum + balance.netCents, 0)
     : mainBalance?.netCents ?? 0;
@@ -42,7 +40,8 @@ export default async function DashboardPage() {
 
           <div className="-mt-7">
             <DashboardActions
-              balance={firstOpenBalance}
+              balances={balances}
+              isDad={currentPerson.role === "dad"}
               phoneNumber={phoneNumber}
               addForm={
                 <QuickAddForm
@@ -54,17 +53,13 @@ export default async function DashboardPage() {
             />
           </div>
 
-          {currentPerson.role === "dad" ? (
-            <DadBalances balances={balances} />
-          ) : null}
-
-          <section className="px-6 pb-7 pt-10">
-            <CategorySpendBar transactions={transactions} />
-            <div className="mb-5 flex items-center justify-between border-t border-[#e8eeeb] pt-7">
-              <h2 className="text-xl font-bold text-[#183c3d]">Transactions</h2>
-              <p className="text-sm font-semibold text-[#9aa9a7]">All</p>
-            </div>
-            <MobileTransactionList transactions={transactions} currentPerson={currentPerson} categories={categories} />
+          <section className="px-6 pb-7 pt-8">
+            <TransactionSection
+              transactions={transactions}
+              currentPerson={currentPerson}
+              categories={categories}
+              kids={kids}
+            />
           </section>
         </section>
 
@@ -74,6 +69,8 @@ export default async function DashboardPage() {
 }
 
 function HeroCard({ currentPerson, totalCents }: { currentPerson: Person; totalCents: number }) {
+  const label = heroBalanceLabel(currentPerson, totalCents);
+
   return (
     <div className="relative h-[254px] overflow-hidden rounded-[2rem] bg-[#0d4359] px-7 pt-5 text-white">
       <div className="absolute inset-0 opacity-45">
@@ -91,47 +88,23 @@ function HeroCard({ currentPerson, totalCents }: { currentPerson: Person; totalC
       </div>
       <div className="relative z-10 mt-5 text-center">
         <h1 className="text-lg font-bold">{currentPerson.name}</h1>
-        <p className="mt-8 text-sm font-semibold text-white/58">Total:</p>
+        <p className="mt-8 text-sm font-semibold text-white/58">{label}</p>
         <p className="mt-1 text-5xl font-black leading-none tracking-normal text-white">
-          {signedMoney(totalCents)}
+          {formatMoney(totalCents)}
         </p>
       </div>
     </div>
   );
 }
 
-function DadBalances({ balances }: { balances: BalanceSummary[] }) {
-  return (
-    <div className="mx-6 mt-8 grid gap-2 rounded-[1.5rem] bg-[#f6f8f2] p-3">
-      {balances.map((balance) => (
-        <div key={balance.kid.id} className="flex items-center justify-between rounded-2xl bg-white px-4 py-3">
-          <div>
-            <p className="text-sm font-bold text-[#183c3d]">{balance.kid.name}</p>
-            <p className="text-xs text-[#9aa9a7]">{balanceLabel(balance)}</p>
-          </div>
-          <p className="font-black text-[#183c3d]">{signedMoney(balance.netCents)}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function signedMoney(cents: number) {
+function heroBalanceLabel(currentPerson: Person, cents: number) {
   if (cents === 0) {
-    return "$0.00";
+    return "Settled";
   }
 
-  return `${cents > 0 ? "+" : "-"}${formatMoney(cents)}`;
-}
-
-function balanceLabel(balance: BalanceSummary) {
-  if (balance.netCents > 0) {
-    return `Dad owes ${balance.kid.name}`;
+  if (currentPerson.role === "dad") {
+    return cents > 0 ? "You owe:" : "You are owed:";
   }
 
-  if (balance.netCents < 0) {
-    return `${balance.kid.name} owes Dad`;
-  }
-
-  return "Settled";
+  return cents > 0 ? "You are owed:" : "You owe:";
 }

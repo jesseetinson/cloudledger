@@ -69,10 +69,10 @@ function SwipeTransactionRow({
   const [dragging, setDragging] = useState(false);
   const deleteFormRef = useRef<HTMLFormElement>(null);
   const paidFormRef = useRef<HTMLFormElement>(null);
-  const delta = transaction.direction === "dad_owes_kid" ? 1 : -1;
-  const signedAmount = currentPerson.role === "kid" ? delta : -delta;
+  const amountLabel = transactionAmountLabel(transaction, currentPerson);
   const paidLabel = transaction.is_paid ? "Mark unpaid" : "Mark paid";
   const PaidIcon = transaction.is_paid ? RotateCcw : CheckCircle2;
+  const actionOpacity = Math.min(Math.abs(offset) / 28, 1);
 
   function onPointerDown(event: PointerEvent<HTMLButtonElement>) {
     startX.current = event.clientX;
@@ -137,13 +137,19 @@ function SwipeTransactionRow({
 
   return (
     <div className="relative overflow-hidden rounded-[1.4rem]">
-      <div className="absolute inset-y-0 left-0 flex w-36 items-center rounded-[1.4rem] bg-[#ff5b63] px-4 text-white">
+      <div
+        className="absolute inset-y-0 left-0 flex w-36 items-center rounded-[1.4rem] bg-[#ff5b63] px-4 text-white"
+        style={{ opacity: offset > 0 ? actionOpacity : 0 }}
+      >
         <div className="grid justify-items-center gap-1">
           <Trash2 className="h-5 w-5" />
           <span className="text-xs font-bold">Delete</span>
         </div>
       </div>
-      <div className="absolute inset-y-0 right-0 flex w-36 items-center justify-end rounded-[1.4rem] bg-[#45c7a8] px-4 text-white">
+      <div
+        className="absolute inset-y-0 right-0 flex w-36 items-center justify-end rounded-[1.4rem] bg-[#45c7a8] px-4 text-white"
+        style={{ opacity: offset < 0 ? actionOpacity : 0 }}
+      >
         <div className="grid justify-items-center gap-1">
           <PaidIcon className="h-5 w-5" />
           <span className="text-xs font-bold">{transaction.is_paid ? "Unpaid" : "Paid"}</span>
@@ -170,14 +176,15 @@ function SwipeTransactionRow({
         </span>
         <span className="text-right">
           <span className="block text-xs text-[#9aa9a7]">{shortDate(transaction.created_at)}</span>
+          <span className="mt-1 block text-[0.68rem] font-bold uppercase tracking-[0.08em] text-[#9aa9a7]">
+            {amountLabel}
+          </span>
           <span
             className={cn(
-              "mt-1 block text-base font-bold",
-              signedAmount >= 0 ? "text-[#183c3d]" : "text-[#183c3d]",
+              "block text-base font-bold text-[#183c3d]",
               transaction.is_paid && "text-[#9aa9a7] line-through",
             )}
           >
-            {signedAmount >= 0 ? "+" : "-"}
             {formatMoney(transaction.amount_cents)}
           </span>
         </span>
@@ -344,6 +351,14 @@ function transactionDirectionLabel(transaction: TransactionWithRelations, curren
   }
 
   return currentPerson.role === "kid" ? "You owe Dad" : `${transaction.kid.name} owes Dad`;
+}
+
+function transactionAmountLabel(transaction: TransactionWithRelations, currentPerson: Person) {
+  if (currentPerson.role === "dad") {
+    return transaction.direction === "dad_owes_kid" ? "You owe" : "You are owed";
+  }
+
+  return transaction.direction === "dad_owes_kid" ? "You are owed" : "You owe";
 }
 
 function shortDate(value: string) {

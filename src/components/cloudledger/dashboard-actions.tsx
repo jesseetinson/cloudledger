@@ -7,15 +7,20 @@ import { settleBalance } from "@/lib/cloudledger/actions";
 import type { BalanceSummary } from "@/lib/cloudledger/types";
 
 export function DashboardActions({
-  balance,
+  balances,
+  isDad,
   phoneNumber,
   addForm,
 }: {
-  balance?: BalanceSummary;
+  balances: BalanceSummary[];
+  isDad: boolean;
   phoneNumber: string;
   addForm: ReactNode;
 }) {
   const [showAdd, setShowAdd] = useState(false);
+  const [showSettle, setShowSettle] = useState(false);
+  const firstOpenBalance = balances.find((balance) => balance.netCents !== 0) ?? balances[0];
+  const settleBalances = balances.filter((balance) => balance.netCents !== 0);
 
   return (
     <>
@@ -23,7 +28,9 @@ export function DashboardActions({
         <RoundAction
           icon={<CreditCard className="h-5 w-5" />}
           label="Settle up"
-          balance={balance}
+          balance={!isDad ? firstOpenBalance : undefined}
+          onClick={isDad ? () => setShowSettle((current) => !current) : undefined}
+          active={showSettle}
         />
         <RoundAction
           href="/api/contact-card"
@@ -39,6 +46,30 @@ export function DashboardActions({
         />
       </div>
 
+      {isDad && showSettle ? (
+        <section className="mx-6 mb-5 -mt-3 rounded-[1.5rem] bg-[#f6f8f2] p-3">
+          <p className="px-2 pb-2 text-sm font-bold text-[#183c3d]">Settle with which kid?</p>
+          <div className="grid gap-2">
+            {settleBalances.length > 0 ? (
+              settleBalances.map((balance) => (
+                <form key={balance.kid.id} action={settleBalance}>
+                  <input type="hidden" name="kidId" value={balance.kid.id} />
+                  <button type="submit" className="flex w-full items-center justify-between rounded-2xl bg-white px-4 py-3 text-left">
+                    <span>
+                      <span className="block text-sm font-bold text-[#183c3d]">{balance.kid.name}</span>
+                      <span className="block text-xs text-[#9aa9a7]">{balance.netCents > 0 ? "You owe" : "You are owed"}</span>
+                    </span>
+                    <span className="font-black text-[#183c3d]">{formatAbs(balance.netCents)}</span>
+                  </button>
+                </form>
+              ))
+            ) : (
+              <p className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-[#9aa9a7]">Everyone is settled.</p>
+            )}
+          </div>
+        </section>
+      ) : null}
+
       {showAdd ? (
         <section id="add-transaction" className="mt-5 scroll-mt-5">
           {addForm}
@@ -46,6 +77,13 @@ export function DashboardActions({
       ) : null}
     </>
   );
+}
+
+function formatAbs(cents: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(Math.abs(cents) / 100);
 }
 
 function RoundAction({
