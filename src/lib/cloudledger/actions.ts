@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { calculateBalances } from "./balances";
 import { dollarsToCents } from "./money";
-import { getCategories, getPeople, getSettlements, getTransactions, requireCurrentPerson, sessionCookieName } from "./data";
+import { getCategories, getPeople, getTransactions, requireCurrentPerson, sessionCookieName } from "./data";
 import { phoneSchema, reviewUpdateSchema, settlementSchema, transactionDetailsSchema, transactionFormSchema } from "./validation";
 
 export async function loginWithPhone(formData: FormData) {
@@ -164,6 +164,7 @@ export async function setTransactionPaid(transactionId: string, isPaid: boolean)
   revalidatePath("/dashboard");
   revalidatePath("/transactions");
   revalidatePath("/review");
+  redirect("/dashboard");
 }
 
 export async function updateTransactionDetails(formData: FormData) {
@@ -227,11 +228,8 @@ export async function settleBalance(formData: FormData) {
     throw new Error("You can only settle your own balance.");
   }
 
-  const [transactions, settlements] = await Promise.all([
-    getTransactions(currentPerson),
-    getSettlements(currentPerson),
-  ]);
-  const balance = calculateBalances([kid], transactions, settlements)[0];
+  const transactions = await getTransactions(currentPerson);
+  const balance = calculateBalances([kid], transactions)[0];
 
   if (!balance || balance.netCents === 0) {
     redirect("/dashboard");
@@ -243,7 +241,7 @@ export async function settleBalance(formData: FormData) {
     redirect("/dashboard?demo=1");
   }
 
-  const { error } = await supabase.from("settlements").insert({
+  const { error: settlementError } = await supabase.from("settlements").insert({
     kid_id: kid.id,
     submitted_by_id: currentPerson.id,
     amount_cents: Math.abs(balance.netCents),
@@ -251,8 +249,27 @@ export async function settleBalance(formData: FormData) {
     note: "Settled from dashboard.",
   });
 
-  if (error) {
-    throw new Error(error.message);
+  if (settlementError) {
+    throw new Error(settlementError.message);
+  }
+
+  let paidQuery = supabase
+    .from("transactions")
+    .update({
+      is_paid: true,
+      paid_at: new Date().toISOString(),
+    })
+    .eq("kid_id", kid.id)
+    .eq("is_paid", false);
+
+  if (currentPerson.role === "kid") {
+    paidQuery = paidQuery.eq("kid_id", currentPerson.id);
+  }
+
+  const { error: paidError } = await paidQuery;
+
+  if (paidError) {
+    throw new Error(paidError.message);
   }
 
   revalidatePath("/dashboard");

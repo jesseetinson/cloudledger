@@ -10,7 +10,7 @@ import { calculateBalances } from "@/lib/cloudledger/balances";
 import { getCloudLedgerPhoneNumber } from "@/lib/cloudledger/contact";
 import { formatMoney } from "@/lib/cloudledger/money";
 import type { BalanceSummary, Person } from "@/lib/cloudledger/types";
-import { getCategories, getPeople, getSettlements, getTransactions, requireCurrentPerson } from "@/lib/cloudledger/data";
+import { getCategories, getPeople, getTransactions, requireCurrentPerson } from "@/lib/cloudledger/data";
 
 export default async function DashboardPage() {
   const currentPerson = await requireCurrentPerson();
@@ -19,15 +19,14 @@ export default async function DashboardPage() {
     redirect("/onboarding");
   }
 
-  const [people, categories, transactions, settlements] = await Promise.all([
+  const [people, categories, transactions] = await Promise.all([
     getPeople(),
     getCategories(),
     getTransactions(currentPerson),
-    getSettlements(currentPerson),
   ]);
   const kids = people.filter((person) => person.role === "kid");
   const visibleKids = currentPerson.role === "dad" ? kids : kids.filter((kid) => kid.id === currentPerson.id);
-  const balances = calculateBalances(visibleKids, transactions, settlements);
+  const balances = calculateBalances(visibleKids, transactions);
   const mainBalance = currentPerson.role === "dad" ? null : balances[0];
   const firstOpenBalance = balances.find((balance) => balance.netCents !== 0) ?? balances[0];
   const totalCents = currentPerson.role === "dad"
