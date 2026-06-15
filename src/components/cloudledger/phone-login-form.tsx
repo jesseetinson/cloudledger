@@ -28,6 +28,15 @@ export function PhoneLoginForm() {
           <p className="text-sm text-slate-500">Use one of the four registered family phone numbers.</p>
         )}
       </div>
+      <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white/60 px-4 py-3 text-sm text-slate-600 cursor-pointer">
+        <input
+          type="checkbox"
+          name="restartOnboarding"
+          value="yes"
+          className="h-4 w-4 rounded accent-sky-600"
+        />
+        Restart tutorial
+      </label>
       <Button type="submit" className="h-12 w-full rounded-2xl bg-sky-600 text-white hover:bg-sky-700">
         Enter CloudLedger
       </Button>

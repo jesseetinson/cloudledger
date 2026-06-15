@@ -60,6 +60,7 @@ export const settlementSchema = z.object({
 
 export const transactionDetailsSchema = z.object({
   transactionId: z.string().min(1),
+  amount: z.coerce.number().positive().max(100000),
   description: z.string().trim().min(2).max(120),
   categoryId: z.string().min(1),
   direction: z.enum(["dad_owes_kid", "kid_owes_dad"]),

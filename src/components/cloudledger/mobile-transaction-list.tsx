@@ -245,13 +245,20 @@ function TransactionDetailsSheet({
             <dt className="text-[#9aa9a7]">Date added</dt>
             <dd className="mt-1 font-semibold text-[#183c3d]">{longDate(transaction.created_at)}</dd>
           </div>
-          <div className="rounded-2xl bg-[#f8f8f2] px-4 py-3">
-            <dt className="text-[#9aa9a7]">Direction</dt>
-            <dd className="mt-1 font-semibold text-[#183c3d]">{transactionDirectionLabel(transaction, currentPerson)}</dd>
-          </div>
         </dl>
         <form action={updateTransactionDetails} className="mt-5 grid gap-3">
           <input type="hidden" name="transactionId" value={transaction.id} />
+          <label className="grid gap-2 text-sm font-semibold text-[#183c3d]">
+            Amount
+            <input
+              name="amount"
+              type="number"
+              min="0.01"
+              step="0.01"
+              defaultValue={(transaction.amount_cents / 100).toFixed(2)}
+              className="h-12 rounded-2xl border border-[#e5ebe7] bg-white px-4 text-base outline-none focus:border-[#46c9ae]"
+            />
+          </label>
           <label className="grid gap-2 text-sm font-semibold text-[#183c3d]">
             Description
             <input

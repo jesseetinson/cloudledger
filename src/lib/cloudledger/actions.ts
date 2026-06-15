@@ -11,6 +11,7 @@ import { phoneSchema, reviewUpdateSchema, settlementSchema, transactionDetailsSc
 
 export async function loginWithPhone(formData: FormData) {
   const phone = phoneSchema.parse(formData.get("phone"));
+  const restartOnboarding = formData.get("restartOnboarding") === "yes";
   const supabase = createSupabaseServiceClient();
   let person = null;
 
@@ -35,6 +36,13 @@ export async function loginWithPhone(formData: FormData) {
     redirect("/login?error=unknown-phone");
   }
 
+  if (restartOnboarding && supabase) {
+    await supabase
+      .from("people")
+      .update({ onboarding_completed: false })
+      .eq("id", person.id);
+  }
+
   (await cookies()).set(sessionCookieName, phone, {
     httpOnly: true,
     sameSite: "lax",
@@ -42,7 +50,8 @@ export async function loginWithPhone(formData: FormData) {
     path: "/",
   });
 
-  redirect(person.onboarding_completed ? "/dashboard" : "/onboarding");
+  const goToOnboarding = restartOnboarding || !person.onboarding_completed;
+  redirect(goToOnboarding ? "/onboarding" : "/dashboard");
 }
 
 export async function logout() {
@@ -171,6 +180,7 @@ export async function updateTransactionDetails(formData: FormData) {
   const currentPerson = await requireCurrentPerson();
   const parsed = transactionDetailsSchema.parse({
     transactionId: formData.get("transactionId"),
+    amount: formData.get("amount"),
     description: formData.get("description"),
     categoryId: formData.get("categoryId"),
     direction: formData.get("direction"),
@@ -191,6 +201,7 @@ export async function updateTransactionDetails(formData: FormData) {
   let query = supabase
     .from("transactions")
     .update({
+      amount_cents: dollarsToCents(parsed.amount),
       description: parsed.description,
       category_id: category.id,
       direction: parsed.direction,
